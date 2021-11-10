@@ -61,7 +61,7 @@ file : 2.3811981678009
 
 When Kirbys global debug config is set to `true` the complete plugin cache will be flushed and no caches will be read. But entries will be created. This will make you live easier – trust me.
 
-### How to use Feather with Lapse or Boost
+### How to use Elephant with Lapse or Boost
 
 You need to set the cache driver for the [lapse plugin](https://github.com/bnomei/kirby3-lapse) to `php`.
 
