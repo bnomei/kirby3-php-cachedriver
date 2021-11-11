@@ -29,6 +29,7 @@ final class PHPCache extends FileCache
 
         $this->isDirty = false;
         $this->load();
+        $this->garbagecollect();
 
         if ($this->options['debug']) {
             $this->flush();
@@ -40,6 +41,18 @@ final class PHPCache extends FileCache
         if ($this->option('mono')) {
             $this->writeMono();
         }
+    }
+
+    public function garbagecollect(): bool
+    {
+        $count = 0;
+        foreach (array_keys($this->database) as $key) {
+            if ($this->database[$key]['created'] + $this->database[$key]['minutes'] * 60 <= time()) {
+                $this->remove($key);
+                $count++;
+            }
+        }
+        return $count > 0;
     }
 
     /**
@@ -60,10 +73,11 @@ final class PHPCache extends FileCache
 
         $monoFile = $this->file(static::DB_FILENAME);
         if ($this->option('mono')) {
-            $this->database[] = F::exists($monoFile) ? include $this->root() . '/' . $file : [];
+            $this->database = F::exists($monoFile) ? include $monoFile : [];
         } else {
             foreach (Dir::files($this->root()) as $file) {
-                if (F::extension($file) === $this->option('extension')) {
+                if (F::filename($file) !== F::filename($monoFile) &&
+                    F::extension($file) === $this->option('extension')) {
                     $this->database[F::filename($file)] = include $this->root() . '/' . $file;
                 }
             }
@@ -93,7 +107,9 @@ final class PHPCache extends FileCache
 
         // serialize
         $data = json_decode($value->toJson(), true);
-        $this->database[$key] = $value;
+        $this->database[$key] = $data;
+        $this->isDirty = true;
+
         if (!$this->option('mono')) {
             $this->write($key, $data);
         }
@@ -103,6 +119,7 @@ final class PHPCache extends FileCache
 
     private function write($key, $data): bool
     {
+        $this->isDirty = false;
         return file_put_contents(
             $this->file($key),
             '<?php' . PHP_EOL .' return ' . var_export($data, true) . ';'
@@ -124,11 +141,12 @@ final class PHPCache extends FileCache
     /**
      * @inheritDoc
      */
-    public function retrieve(string $key, bool $withTransaction = true): ?Value
+    public function retrieve(string $key): ?Value
     {
         $key = $this->key($key);
+        $value = A::get($this->database, $key);
 
-        return A::get($this->database, $key);
+        return $value ? Value::fromArray($value) : null;
     }
 
     public function get(string $key, $default = null)
@@ -137,7 +155,9 @@ final class PHPCache extends FileCache
             return $default;
         }
 
-        return parent::get($key, $default);
+        $value = $this->retrieve($key);
+
+        return $value ? $value->value() : null;
     }
 
     /**
@@ -149,6 +169,13 @@ final class PHPCache extends FileCache
 
         if (array_key_exists($key, $this->database)) {
             unset($this->database[$key]);
+            $this->isDirty = true;
+        }
+        if (!$this->option('mono')) {
+            $file = $this->file($key);
+            if (F::exists($file)) {
+                return unlink($file);
+            }
         }
 
         return true;
@@ -159,6 +186,7 @@ final class PHPCache extends FileCache
      */
     public function flush(): bool
     {
+        $this->isDirty = true;
         return Dir::remove($this->root()) && Dir::make($this->root());
     }
 
