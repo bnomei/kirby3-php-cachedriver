@@ -157,7 +157,7 @@ final class PHPCache extends FileCache
 
         $value = $this->retrieve($key);
 
-        return $value ? $value->value() : null;
+        return $value ? $value->value() : $default;
     }
 
     /**
