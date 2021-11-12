@@ -47,7 +47,8 @@ final class PHPCache extends FileCache
     {
         $count = 0;
         foreach (array_keys($this->database) as $key) {
-            if ($this->database[$key]['created'] + $this->database[$key]['minutes'] * 60 <= time()) {
+            $expires = Value::fromArray($this->database[$key])->expires();
+            if ($expires && $expires < time()) {
                 $this->remove($key);
                 $count++;
             }
