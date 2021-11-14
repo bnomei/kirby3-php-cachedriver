@@ -31,17 +31,23 @@ final class PHPCache extends FileCache
         $this->load();
         $this->garbagecollect();
 
+        register_shutdown_function(function() {
+            $this->writeMono();
+        });
+
         if ($this->options['debug']) {
             $this->flush();
         }
     }
 
+    /* NOTE: does not work relieable enough using register_shutdown_function instead
     public function __destruct()
     {
         if ($this->option('mono')) {
             $this->writeMono();
         }
     }
+    */
 
     public function garbagecollect(): bool
     {
