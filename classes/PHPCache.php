@@ -13,6 +13,9 @@ use Kirby\Toolkit\Str;
 
 final class PHPCache extends FileCache
 {
+
+    private $shutdownCallbacks = [];
+
     /** @var array $database */
     private $database;
 
@@ -31,23 +34,24 @@ final class PHPCache extends FileCache
         $this->load();
         $this->garbagecollect();
 
-        register_shutdown_function(function() {
-            $this->writeMono();
-        });
-
         if ($this->options['debug']) {
             $this->flush();
         }
     }
 
-    /* NOTE: does not work relieable enough using register_shutdown_function instead
     public function __destruct()
     {
-        if ($this->option('mono')) {
-            $this->writeMono();
+        foreach($this->shutdownCallbacks as $callback) {
+            if (!is_string($callback) && is_callable($callback)) {
+                $callback();
+            }
         }
+        $this->writeMono();
     }
-    */
+
+    public function register_shutdown_function($callback) {
+        $this->shutdownCallbacks[] = $callback;
+    }
 
     public function garbagecollect(): bool
     {
