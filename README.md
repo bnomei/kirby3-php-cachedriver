@@ -44,6 +44,15 @@ elephant()->remove('key');
 elephant()->flush();
 ```
 
+### Mono or multile files
+
+With the `bnomei.php-cachedriver.mono` (default: true) setting you can change if the cache driver uses a single or multiple files to store the cached data. In either case all files will be loaded so there is no gain here. But when writing data the behaviour is different. 
+
+In the *mono*-mode all data is written at the end of the php skript life-cycle. This does not count against your script execution time but for example when you change value in the cache with each request writing that big file everytime the time might prove inefficient. If the data in your cache changes very rarely or a lot use this behaviour.
+
+When storing the data in one file per cache key then writing to the cache happens right when calling `$cache->set()`. This means you only write small changes and fast but it counts towards your max script execution time. This behaviour is well suited when a small amount of data changes often.
+
+
 ### Benchmark
 
 ```php
