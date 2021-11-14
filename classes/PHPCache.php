@@ -13,10 +13,6 @@ use Kirby\Toolkit\Str;
 
 final class PHPCache extends FileCache
 {
-
-    /** @var array<int, PHPCache> $caches */
-    private static $caches = [];
-
     /** @var array $database */
     private $database;
 
@@ -35,27 +31,16 @@ final class PHPCache extends FileCache
         $this->load();
         $this->garbagecollect();
 
-        /* NOTE: this will not be called after contentWrite
         register_shutdown_function(function() {
             $this->writeMono();
         });
-        */
 
         if ($this->options['debug']) {
             $this->flush();
         }
-
-        static::$caches[] = $this;
     }
 
-    public function shutdown()
-    {
-        foreach(static::$caches as $cache) {
-            $cache->writeMono();
-        }
-    }
-
-    /* NOTE: this will not be called after contentWrite
+    /* NOTE: does not work relieable enough using register_shutdown_function instead
     public function __destruct()
     {
         if ($this->option('mono')) {
