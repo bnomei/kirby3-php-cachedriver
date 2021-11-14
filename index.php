@@ -21,4 +21,10 @@ Kirby::plugin('bnomei/php-cachedriver', [
     'cacheTypes' => [
         'php' => \Bnomei\PHPCache::class
     ],
+    'hooks' => [
+        'route:after' => function ($route, $path, $method, $result, $final) {
+            \Bnomei\PHPCache::shutdown();
+            return $result;
+        },
+    ],
 ]);
