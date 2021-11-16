@@ -57,8 +57,12 @@ final class PHPCache extends FileCache
     {
         $count = 0;
         foreach (array_keys($this->database) as $key) {
-            $expires = Value::fromArray($this->database[$key])->expires();
-            if ($expires && $expires < time()) {
+            $expires = null;
+            $data = $this->database[$key];
+            if($data) {
+                $expires = Value::fromArray($data)->expires();
+            }
+            if (!$data || ($expires && $expires < time())) {
                 $this->remove($key);
                 $count++;
             }
@@ -126,6 +130,17 @@ final class PHPCache extends FileCache
         }
 
         return true;
+    }
+
+    protected function file(string $key): string
+    {
+        $file = $this->root . '/' . md5($key);
+
+        if (isset($this->options['extension'])) {
+            return $file . '.' . $this->options['extension'];
+        } else {
+            return $file;
+        }
     }
 
     private function write($key, $data): bool
