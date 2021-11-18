@@ -119,9 +119,19 @@ final class PHPCache extends FileCache
 
         $key = $this->key($key);
         $value = new Value($value, $minutes);
+        $data = null;
 
         // serialize
-        $data = json_decode($value->toJson(), true);
+        if ($this->option('serialize') === 'json') {
+            $data = json_decode($value->toJson(), true);
+            // if encoding failed try to write raw values
+                if($data === null && json_last_error() !== JSON_ERROR_NONE) {
+                    $data = $this->serialize($value->toArray());
+                }
+        } else {
+            $data = $this->serialize($value->toArray());
+        }
+        
         $this->database[$key] = $data;
         $this->isDirty = true;
 
@@ -130,6 +140,38 @@ final class PHPCache extends FileCache
         }
 
         return true;
+    }
+
+    private static function isCallable($value): bool
+    {
+        // do not call global helpers just methods or closures
+        return !is_string($value) && is_callable($value);
+    }
+
+    public function serialize($value)
+    {
+        if (! $value) {
+            return null;
+        }
+        $value = self::isCallable($value) ? $value() : $value;
+
+        if (is_a($value, 'Kirby\Toolkit\Obj')) {
+            $value = $value->toArray();
+        }
+
+        if (is_a($value, 'Kirby\Cms\Field')) {
+            $value = $value->value();
+        }
+
+        if (is_array($value)) {
+            $items = [];
+            foreach ($value as $key => $item) {
+                $items[$key] = $this->serialize($item);
+            }
+            return $items;
+        }
+
+        return $value;
     }
 
     protected function file(string $key): string
@@ -244,6 +286,7 @@ final class PHPCache extends FileCache
             'root' => $root,
             'debug' => \option('debug'),
             'mono' => \option('bnomei.php-cachedriver.mono'),
+            'serialize' => \option('bnomei.php-cachedriver.serialize'),
         ], $options);
 
         // overwrite *.cache in all constructors

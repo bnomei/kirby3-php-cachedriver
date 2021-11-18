@@ -52,6 +52,10 @@ In the *mono*-mode all data is written at the end of the php skript life-cycle. 
 
 When storing the data in one file per cache key then writing to the cache happens right when calling `$cache->set()`. This means you only write small changes and fast but it counts towards your max script execution time. This behaviour is well suited when a small amount of data changes often.
 
+### Serialization of data
+
+This plugin defaults to a simple serialization logic which is quick but only serializes primitive data types, closures, `Kirby\Cms\Field` and `Kirby\Toolkit\Obj`. This should be enough for must usecases.
+If your need broader support set `bnomei.php-cachedriver.serialize` to `json` which will en- and decode your data as json before storing it. That make is a tick slower but will ensure your data are only primitive types as well without the hassle of serializing it manually before caching it.
 
 ### Benchmark
 
@@ -94,6 +98,7 @@ Use [Kirby 3 Boost](https://github.com/bnomei/kirby3-boost) to setup a cache for
 | bnomei.php-cachedriver.            | Default        | Description               |            
 |---------------------------|----------------|---------------------------|
 | mono | `true` | use a single file instead of one for each key  |
+| serialize | `'primitive'` | which is fastest or `'json'` for less hassle |
 
 ## Disclaimer
 
