@@ -48,7 +48,7 @@ elephant()->flush();
 
 With the `bnomei.php-cachedriver.mono` (default: true) setting you can change if the cache driver uses a single or multiple files to store the cached data. In either case all files will be loaded so there is no gain here. But when writing data the behaviour is different. 
 
-In the *mono*-mode all data is written at the end of the php skript life-cycle. This does not count against your script execution time but for example when you change value in the cache with each request writing that big file everytime the time might prove inefficient. If the data in your cache changes very rarely or a lot use this behaviour.
+In the *mono*-mode all data is written at the end of the php skript life-cycle. This does not count against your script execution time but for example when you change value in the cache with each request writing that big file everytime the time might prove inefficient. If the data in your cache changes very rarely or a lot use this behaviour. But the *mono*-mode is **NOT** suited for concurrent writes. For example: Request A reads the cache and starts before Request B but finishes after B and Request A write to the cache then any changes Request B did to the cache will be lost. This might happen with multiple visitors, tabs or concurrent users in the Panel.
 
 When storing the data in one file per cache key then writing to the cache happens right when calling `$cache->set()`. This means you only write small changes and fast but it counts towards your max script execution time. This behaviour is well suited when a small amount of data changes often.
 
@@ -76,7 +76,7 @@ When Kirbys global debug config is set to `true` the complete plugin cache will 
 
 ### How to use Elephant with Lapse or Boost
 
-You need to set the cache driver for the [lapse plugin](https://github.com/bnomei/kirby3-lapse) to `php`.
+You need to set the cache driver for the [lapse plugin](https://github.com/bnomei/kirby3-lapse) to `php`. Please be aware that the *mono*-mode is not suited for concurrent writes as described above.
 
 **site/config/config.php**
 ```php
