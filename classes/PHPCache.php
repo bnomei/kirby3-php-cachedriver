@@ -63,7 +63,7 @@ final class PHPCache extends FileCache
                 $expires = Value::fromArray($data)->expires();
             }
             if (!$data || ($expires && $expires < time())) {
-                $this->remove($key);
+                $this->remove($key, true);
                 $count++;
             }
         }
@@ -231,9 +231,11 @@ final class PHPCache extends FileCache
     /**
      * @inheritDoc
      */
-    public function remove(string $key): bool
+    public function remove(string $key, bool $hasPrefix = false): bool
     {
-        $key = $this->key($key);
+        if (! $hasPrefix) {
+            $key = $this->key($key);
+        }
 
         if (array_key_exists($key, $this->database)) {
             unset($this->database[$key]);
