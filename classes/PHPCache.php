@@ -13,7 +13,6 @@ use Kirby\Toolkit\Str;
 
 final class PHPCache extends FileCache
 {
-
     private $shutdownCallbacks = [];
 
     /** @var array $database */
@@ -23,6 +22,7 @@ final class PHPCache extends FileCache
     private $isDirty;
 
     public const DB_FILENAME = 'phpcache-mono';
+    public const FILE_SALT = 'PH9cH@uy';
 
     public function __construct(array $options = [])
     {
@@ -41,7 +41,7 @@ final class PHPCache extends FileCache
 
     public function __destruct()
     {
-        foreach($this->shutdownCallbacks as $callback) {
+        foreach ($this->shutdownCallbacks as $callback) {
             if (!is_string($callback) && is_callable($callback)) {
                 $callback();
             }
@@ -49,7 +49,8 @@ final class PHPCache extends FileCache
         $this->writeMono();
     }
 
-    public function register_shutdown_function($callback) {
+    public function register_shutdown_function($callback)
+    {
         $this->shutdownCallbacks[] = $callback;
     }
 
@@ -59,10 +60,10 @@ final class PHPCache extends FileCache
         foreach (array_keys($this->database) as $key) {
             $expires = null;
             $data = $this->database[$key];
-            if($data) {
+            if ($data) {
                 $expires = Value::fromArray($data)->expires();
             }
-            if (!$data || ($expires && $expires < time())) {
+            if (! $data || ($expires && $expires < time())) {
                 $this->remove($key, true);
                 $count++;
             }
@@ -93,10 +94,18 @@ final class PHPCache extends FileCache
             foreach (Dir::files($this->root()) as $file) {
                 if (F::filename($file) !== F::filename($monoFile) &&
                     F::extension($file) === $this->option('extension')) {
-                    $this->database[F::filename($file)] = include $this->root() . '/' . $file;
+                    $data = include $this->root() . '/' . $file;
+                    foreach ($data as $key => $value) {
+                        $this->database[$key] = $value;
+                    }
                 }
             }
         }
+    }
+
+    public function toArray(): array
+    {
+        return $this->database;
     }
 
     /**
@@ -104,7 +113,8 @@ final class PHPCache extends FileCache
      */
     public function set(string $key, $value, int $minutes = 0): bool
     {
-        /* SHOULD SET EVEN IN DEBUG
+        // SHOULD SET EVEN IN DEBUG
+        /*
         if ($this->option('debug')) {
             return true;
         }
@@ -125,9 +135,9 @@ final class PHPCache extends FileCache
         if ($this->option('serialize') === 'json') {
             $data = json_decode($value->toJson(), true);
             // if encoding failed try to write raw values
-                if($data === null && json_last_error() !== JSON_ERROR_NONE) {
-                    $data = $this->serialize($value->toArray());
-                }
+            if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+                $data = $this->serialize($value->toArray());
+            }
         } else {
             $data = $this->serialize($value->toArray());
         }
@@ -135,7 +145,7 @@ final class PHPCache extends FileCache
         $this->database[$key] = $data;
         $this->isDirty = true;
 
-        if (!$this->option('mono')) {
+        if (! $this->option('mono')) {
             $this->write($key, $data);
         }
 
@@ -176,7 +186,7 @@ final class PHPCache extends FileCache
 
     protected function file(string $key): string
     {
-        $file = $this->root . '/' . md5($key);
+        $file = $this->root . '/' . strval(crc32(($key . static::FILE_SALT)));
 
         if (isset($this->options['extension'])) {
             return $file . '.' . $this->options['extension'];
@@ -190,7 +200,7 @@ final class PHPCache extends FileCache
         $this->isDirty = false;
         return file_put_contents(
             $this->file($key),
-            '<?php' . PHP_EOL .' return ' . var_export($data, true) . ';'
+            '<?php' . PHP_EOL .' return ' . var_export([$key => $data], true) . ';'
         ) !== false;
     }
 
@@ -241,7 +251,7 @@ final class PHPCache extends FileCache
             unset($this->database[$key]);
             $this->isDirty = true;
         }
-        if (!$this->option('mono')) {
+        if (! $this->option('mono')) {
             $file = $this->file($key);
             if (F::exists($file)) {
                 return unlink($file);
@@ -305,7 +315,7 @@ final class PHPCache extends FileCache
             $time = microtime(true);
             for ($i = 0; $i < $count; $i++) {
                 $key = $prefix . $i;
-                if (!$driver->get($key)) {
+                if (! $driver->get($key)) {
                     $driver->set($key, Str::random(1000));
                 }
             }
@@ -328,7 +338,7 @@ final class PHPCache extends FileCache
             }
             for ($i = 0; $i < $count; $i++) {
                 $key = $prefix . $i;
-                if (!$driver->get($key)) {
+                if (! $driver->get($key)) {
                     // just read all again
                 }
             }

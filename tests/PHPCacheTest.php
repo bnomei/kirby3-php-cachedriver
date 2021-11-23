@@ -4,63 +4,71 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use PHPUnit\Framework\TestCase;
 use Bnomei\PHPCache;
+use Kirby\Cms\Dir;
 
 final class PHPCacheTest extends TestCase
 {
-    /**
-     * @var PHPCache
-     */
-    private PHPCache $cache;
-
     protected function setUp(): void
     {
-        $this->cache = PHPCache::singleton();
-        $this->cache->flush();
+        Dir::remove(__DIR__ . '/site/cache/');
     }
 
     protected function tearDown(): void
     {
-        //$this->cache->flush();
-        //unset($this->cache);
+        Dir::remove(__DIR__ . '/site/cache/');
     }
 
     public function testConstruct()
     {
-        $this->assertInstanceOf(PHPCache::class, $this->cache);
+        $cache = new PHPCache([
+            'mono' => true,
+        ]);
+        $this->assertInstanceOf(PHPCache::class, $cache);
     }
 
     public function testOption()
     {
-        $this->assertIsArray($this->cache->option());
-        $this->assertEquals(null, $this->cache->option('debug'));
+        $cache = new PHPCache([
+            'mono' => true,
+        ]);
+        $this->assertIsArray($cache->option());
+        $this->assertEquals(null, $cache->option('debug'));
     }
 
     public function testFlush()
     {
-        $this->assertNull($this->cache->get('something'));
+        $cache = new PHPCache([
+            'mono' => true,
+        ]);
+        $this->assertNull($cache->get('something'));
     }
 
     public function testCacheSetGet()
     {
-        $this->assertTrue($this->cache->set('some', 'value'));
-        $this->assertEquals('value', $this->cache->get('some'));
+        $cache = new PHPCache([
+            'mono' => true,
+        ]);
+        $this->assertTrue($cache->set('some', 'value'));
+        $this->assertEquals('value', $cache->get('some'));
     }
 
     public function testCacheWithWriteAndRemove()
     {
+        $cache = new PHPCache([
+            'mono' => true,
+        ]);
         $date = date('c');
 
-        $this->assertTrue($this->cache->set('persist', $date));
-        $this->assertNotNull($this->cache->get('persist'));
-        unset($this->cache); // will happen at end of pageview
+        $this->assertTrue($cache->set('persist', $date));
+        $this->assertNotNull($cache->get('persist'));
+        $cache->writeMono();
 
-        $this->cache = PHPCache::singleton();
-        $this->assertEquals($date, $this->cache->get('persist'));
-        $this->assertTrue($this->cache->remove('persist', $date));
-        unset($this->cache); // will happen at end of pageview
+        $this->assertEquals($date, $cache->get('persist'));
+        $this->assertTrue($cache->remove('persist', $date));
+        $this->assertNull($cache->get('persist'));
+        $cache->writeMono();
 
-        $this->cache = PHPCache::singleton();
-        $this->assertNull($this->cache->get('persist'));
+        //$this->assertNull($cache->get('persist'));
     }
 
     public function testJSONValue()
@@ -104,21 +112,120 @@ final class PHPCacheTest extends TestCase
         JSON;
         $array = json_decode($json, true);
 
-        $this->cache->set('json_string', $json);
-        $this->cache->set('json_array', $array);
+        $cache = new PHPCache([
+            'mono' => true,
+        ]);
 
-        $this->assertEquals($json, $this->cache->get('json_string'));
+        $cache->set('json_string', $json);
+        $cache->set('json_array', $array);
+
+        $this->assertEquals($json, $cache->get('json_string'));
         $this->assertEquals(
             $array['result']['data'][1]['title'],
-            $this->cache->get('json_array')['result']['data'][1]['title']
+            $cache->get('json_array')['result']['data'][1]['title']
         );
+    }
+
+    public function testBenchmarkMono()
+    {
+        $cache = new PHPCache([
+            'mono' => true,
+        ]);
+
+        $cache->flush();
+        $cache->benchmark(100);
+        unset($cache); // will happen at end of pageview
+        $this->assertTrue(true);
     }
 
     public function testBenchmark()
     {
-        $this->cache->flush();
-        $this->cache->benchmark(1000);
-        unset($this->cache); // will happen at end of pageview
+        $cache = new PHPCache([
+            'mono' => false,
+        ]);
+
+        $cache->flush();
+        $cache->benchmark(100);
+        unset($cache); // will happen at end of pageview
         $this->assertTrue(true);
+    }
+
+    public function testLoadingFromMono()
+    {
+        $cache = new PHPCache([
+            'mono' => true,
+        ]);
+
+        $this->assertNull($cache->get('loadingmono1'));
+        $this->assertNull($cache->get('loadingmono2'));
+        $this->assertTrue($cache->set('loadingmono1', 'does work 1'));
+        $this->assertTrue($cache->set('loadingmono2', 'does work 2'));
+        $this->assertEquals('does work 1', $cache->get('loadingmono1'));
+        $this->assertEquals('does work 2', $cache->get('loadingmono2'));
+        $this->assertTrue($cache->writeMono());
+
+        $cache2 = new PHPCache([
+            'mono' => true,
+        ]);
+        $this->assertEquals('does work 1', $cache2->get('loadingmono1'));
+        $this->assertEquals('does work 2', $cache2->get('loadingmono2'));
+    }
+
+    public function testLoadingFromFiles()
+    {
+        $cache = new PHPCache([
+            'mono' => false,
+        ]);
+
+        $this->assertNull($cache->get('loadingmono1'));
+        $this->assertNull($cache->get('loadingmono2'));
+        $this->assertTrue($cache->set('loadingmono1', 'does work 1'));
+        $this->assertTrue($cache->set('loadingmono2', 'does work 2'));
+        $this->assertEquals('does work 1', $cache->get('loadingmono1'));
+        $this->assertEquals('does work 2', $cache->get('loadingmono2'));
+
+        $cache2 = new PHPCache([
+            'mono' => false,
+        ]);
+        $this->assertEquals('does work 1', $cache2->get('loadingmono1'));
+        $this->assertEquals('does work 2', $cache2->get('loadingmono2'));
+    }
+
+    public function testGarbageCollection()
+    {
+        $cache = new PHPCache([
+            'mono' => true,
+        ]);
+
+        $this->assertNull($cache->get('loadingmono1'));
+        $this->assertNull($cache->get('loadingmono2'));
+        $this->assertNull($cache->get('loadingmono3'));
+        $this->assertTrue($cache->set('loadingmono1', 'does work 1', 1));
+        $this->assertTrue($cache->set('loadingmono2', 'does work 2', 2));
+        $this->assertTrue($cache->set('loadingmono3', 'does work 3', 0));
+        $this->assertEquals('does work 1', $cache->get('loadingmono1'));
+        $this->assertEquals('does work 2', $cache->get('loadingmono2'));
+        $this->assertEquals('does work 3', $cache->get('loadingmono3'));
+        $cache->writeMono();
+
+        sleep(61);
+
+        $cache2 = new PHPCache([
+            'mono' => true,
+        ]);
+
+        $this->assertNull($cache2->get('loadingmono1'));
+        $this->assertNotNull($cache2->get('loadingmono2'));
+        $this->assertNotNull($cache2->get('loadingmono3'));
+
+        sleep(61);
+
+        $cache3 = new PHPCache([
+            'mono' => true,
+        ]);
+
+        $this->assertNull($cache3->get('loadingmono1'));
+        $this->assertNull($cache3->get('loadingmono2'));
+        $this->assertNotNull($cache3->get('loadingmono3'));
     }
 }
