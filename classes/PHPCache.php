@@ -93,7 +93,7 @@ final class PHPCache extends FileCache
             foreach (Dir::files($this->root()) as $file) {
                 if (F::filename($file) !== F::filename($monoFile) &&
                     F::extension($file) === $this->option('extension')) {
-                    $this->database[F::filename($file)] = include $this->root() . '/' . $file;
+                    $this->database[F::name($file)] = include $this->root() . '/' . $file;
                 }
             }
         }
@@ -104,7 +104,8 @@ final class PHPCache extends FileCache
      */
     public function set(string $key, $value, int $minutes = 0): bool
     {
-        /* SHOULD SET EVEN IN DEBUG
+        // SHOULD SET EVEN IN DEBUG
+        /*
         if ($this->option('debug')) {
             return true;
         }
@@ -131,7 +132,7 @@ final class PHPCache extends FileCache
         } else {
             $data = $this->serialize($value->toArray());
         }
-        
+
         $this->database[$key] = $data;
         $this->isDirty = true;
 
@@ -150,7 +151,7 @@ final class PHPCache extends FileCache
 
     public function serialize($value)
     {
-        if (! $value) {
+        if (!$value) {
             return null;
         }
         $value = self::isCallable($value) ? $value() : $value;
@@ -211,7 +212,10 @@ final class PHPCache extends FileCache
      */
     public function retrieve(string $key): ?Value
     {
-        $key = $this->key($key);
+        $key = $this->option('mono')
+            ? $this->key($key)
+            : md5($key);
+
         $value = A::get($this->database, $key);
 
         return $value ? Value::fromArray($value) : null;
@@ -219,9 +223,11 @@ final class PHPCache extends FileCache
 
     public function get(string $key, $default = null)
     {
+        /*
         if ($this->option('debug')) {
             return $default;
         }
+        */
 
         $value = $this->retrieve($key);
 
@@ -233,7 +239,7 @@ final class PHPCache extends FileCache
      */
     public function remove(string $key, bool $hasPrefix = false): bool
     {
-        if (! $hasPrefix) {
+        if (!$hasPrefix) {
             $key = $this->key($key);
         }
 
