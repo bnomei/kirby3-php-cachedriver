@@ -230,20 +230,31 @@ final class PHPCache extends FileCache
     private function write($key, $data): bool
     {
         $this->isDirty = false;
-        return file_put_contents(
-            $this->file($key),
+
+        $file = $this->file($key);
+        $success = file_put_contents(
+            $file,
             '<?php' . PHP_EOL .' return ' . var_export([$key => $data], true) . ';'
         ) !== false;
+        opcache_invalidate(__FILE__);
+        opcache_invalidate($file);
+
+        return $success;
     }
 
     public function writeMono(): bool
     {
         if ($this->option('mono') && $this->isDirty) {
             $this->isDirty = false;
-            return file_put_contents(
-                $this->file(static::DB_FILENAME),
+            $file = $this->file(static::DB_FILENAME);
+            $success = file_put_contents(
+                $file,
                 '<?php' . PHP_EOL .' return ' . var_export($this->database, true) . ';'
             ) !== false;
+            opcache_invalidate(__FILE__);
+            opcache_invalidate($file);
+
+            return $success;
         }
         return true;
     }
