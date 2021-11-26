@@ -17,6 +17,7 @@ Kirby::plugin('bnomei/php-cachedriver', [
     'options' => [
         'cache' => true, // create cache folder
         'mono' => true, // use a single file
+        'check_opcache' => true,
         'serialize' => 'primitive', // or 'json'
     ],
     'cacheTypes' => [

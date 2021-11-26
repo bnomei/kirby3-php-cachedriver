@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bnomei;
 
+use Exception;
 use Kirby\Cache\FileCache;
 use Kirby\Cache\Value;
 use Kirby\Cms\Dir;
@@ -31,10 +32,13 @@ final class PHPCache extends FileCache
         parent::__construct($this->options);
 
         $this->isDirty = false;
+        if ($this->option('check_opcache')) {
+            $this->check_opcache();
+        }
         $this->load();
         $this->garbagecollect();
 
-        if ($this->options['debug']) {
+        if ($this->option('debug')) {
             $this->flush();
         }
     }
@@ -47,6 +51,34 @@ final class PHPCache extends FileCache
             }
         }
         $this->writeMono();
+    }
+
+    public function check_opcache(): bool
+    {
+        if ($this->option('opcache.enable') !== true) {
+            throw new Exception("PHP Cache Driver expects opcache to be enabled");
+            return false;
+        }
+
+        // ignore in CLI because thats the cache is flushed for each CLI call anyway
+        /*
+        if (php_sapi_name() === "cli" && $this->option('opcache.enable_cli') !== true) {
+            // throw new Exception("PHP Cache Driver expects opcache to be enabled");
+            return false;
+        }
+        */
+
+        if ($this->option('opcache.validate_timestamps') !== true) {
+            throw new Exception("PHP Cache Driver expects 'opcache.validate_timestamps=1'");
+            return false;
+        }
+
+        if ($this->option('opcache.revalidate_freq') !== 0) {
+            throw new Exception("PHP Cache Driver expects 'opcache.revalidate_freq=0'");
+            return false;
+        }
+
+        return true;
     }
 
     public function register_shutdown_function($callback)
@@ -298,11 +330,22 @@ final class PHPCache extends FileCache
             'root' => $root,
             'debug' => \option('debug'),
             'mono' => \option('bnomei.php-cachedriver.mono'),
+            'check_opcache' => \option('bnomei.php-cachedriver.check_opcache'),
             'serialize' => \option('bnomei.php-cachedriver.serialize'),
         ], $options);
 
         // overwrite *.cache in all constructors
         $this->options['extension'] = 'php';
+
+        // opcache
+        if ($this->options['check_opcache'] && $oc = opcache_get_configuration()) {
+            if ($directives = A::get($oc, 'directives')) {
+                $this->options['opcache.enable'] = A::get($directives, 'opcache.enable');
+                $this->options['opcache.enable_cli'] = A::get($directives, 'opcache.enable_cli');
+                $this->options['opcache.validate_timestamps'] = A::get($directives, 'opcache.validate_timestamps');
+                $this->options['opcache.revalidate_freq'] = A::get($directives, 'opcache.revalidate_freq');
+            }
+        }
     }
 
     public function benchmark(int $count = 10)

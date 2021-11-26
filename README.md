@@ -44,18 +44,37 @@ elephant()->remove('key');
 elephant()->flush();
 ```
 
-### Mono or multile files
+### Cache file(s)
 
 With the `bnomei.php-cachedriver.mono` (default: true) setting you can change if the cache driver uses a single or multiple files to store the cached data. In either case all files will be loaded so there is no gain here. But when writing data the behaviour is different. 
 
-In the *mono*-mode all data is written at the end of the php skript life-cycle. This does not count against your script execution time but for example when you change value in the cache with each request writing that big file everytime the time might prove inefficient. If the data in your cache changes very rarely or a lot use this behaviour. But the *mono*-mode is **NOT** suited for concurrent writes. For example: Request A reads the cache and starts before Request B but finishes after B and Request A write to the cache then any changes Request B did to the cache will be lost. This might happen with multiple visitors, tabs or concurrent users in the Panel.
+#### Mono: lots of values, big changes or many at once
+In the *mono*-mode all data is written at the end of the php skript life-cycle. This does not count against your script execution time but for example when you change value in the cache with each request writing that big file everytime the time might prove inefficient. If the data in your cache changes very rarely or a lot use this behaviour. 
 
-When storing the data in one file per cache key then writing to the cache happens right when calling `$cache->set()`. This means you only write small changes and fast but it counts towards your max script execution time. This behaviour is well suited when a small amount of data changes often.
+
+### Mono and concurrent HTTP requests
+But the *mono*-mode is **NOT** suited for concurrent writes. For example: Request A reads the cache and starts before Request B but finishes after B and Request A write to the cache then any changes Request B did to the cache will be lost. This might happen with multiple visitors or concurrent users in the Panel that actually **do change data**. For most websites you should be fine.
+
+#### Multiple Files: few values to cache, small changes and often but not at once
+When storing the data in multiples files - one file per cache key - then writing to the cache happens right when calling `$cache->set()`. This means you only write small changes and fast but it counts towards your max script execution time. This behaviour is well suited when a small amount of data changes often.
 
 ### Serialization of data
 
 This plugin defaults to a simple serialization logic which is quick but only serializes primitive data types, closures, `Kirby\Cms\Field` and `Kirby\Toolkit\Obj`. This should be enough for most usecases.
 If you need broader support set `bnomei.php-cachedriver.serialize` to `json` which will en- and decode your data as json before storing it. That is a bit slower but will ensure your data contains only primitive types without the hassle of serializing it manually before caching it.
+
+### OPCache
+
+Make sure [OPCache is configured](https://www.php.net/manual/en/opcache.configuration.php) to load the php files from the cache without any delay. Most probably you will have to set these values in your `user.ini` or something similar! If you do not set these values you might have outdated data being loaded from php files cached by OPCache instead of loading the right ones you want from disk.
+
+```shell
+opcache.enable=1
+opcache.enable_cli=0 # default is 0, leave it like that
+opcache.validate_timestamps=1
+opcache.revalidate_freq=0 # default is 2, 0 => on every request
+```
+
+> Thanks Al for helping me get these config values right.
 
 ### Benchmark
 
@@ -98,6 +117,7 @@ Use [Kirby 3 Boost](https://github.com/bnomei/kirby3-boost) to setup a cache for
 | bnomei.php-cachedriver.            | Default        | Description               |            
 |---------------------------|----------------|---------------------------|
 | mono | `true` | use a single file instead of one for each key  |
+| check_opcache | `true` | check OPCache settings |
 | serialize | `'primitive'` | which is fastest or `'json'` for less hassle |
 
 ## Disclaimer
