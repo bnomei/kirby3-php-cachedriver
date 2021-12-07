@@ -52,7 +52,7 @@ With the `bnomei.php-cachedriver.mono` (default: true) setting you can change if
 In the *mono*-mode all data is written at the end of the php skript life-cycle. This does not count against your script execution time but for example when you change value in the cache with each request writing that big file everytime the time might prove inefficient. If the data in your cache changes very rarely or a lot use this behaviour. 
 
 
-### Mono and concurrent HTTP requests
+#### Mono and concurrent HTTP requests
 But the *mono*-mode is **NOT** suited for concurrent writes. For example: Request A reads the cache and starts before Request B but finishes after B and Request A write to the cache then any changes Request B did to the cache will be lost. This might happen with multiple visitors or concurrent users in the Panel that actually **do change data**. For most websites you should be fine.
 
 #### Multiple Files: few values to cache, small changes and often but not at once
