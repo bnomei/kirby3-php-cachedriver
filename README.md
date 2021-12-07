@@ -60,7 +60,7 @@ When storing the data in multiples files - one file per cache key - then writing
 
 ### Serialization of data
 
-This plugin defaults to a simple serialization logic which is quick but only serializes primitive data types, closures, `Kirby\Cms\Field` and `Kirby\Toolkit\Obj`. This should be enough for most usecases.
+This plugin defaults to a simple serialization logic which is quick but only serializes primitive data types, closures, objects that have a `toArray()`-method like `Kirby\Cms\Field` and `Kirby\Toolkit\Obj`. This should be enough for most usecases.
 If you need broader support set `bnomei.php-cachedriver.serialize` to `json` which will en- and decode your data as json before storing it. That is a bit slower but will ensure your data contains only primitive types without the hassle of serializing it manually before caching it.
 
 ### OPCache

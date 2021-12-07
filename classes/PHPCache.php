@@ -197,12 +197,14 @@ final class PHPCache extends FileCache
         }
         $value = self::isCallable($value) ? $value() : $value;
 
-        if (is_a($value, 'Kirby\Toolkit\Obj')) {
-            $value = $value->toArray();
-        }
 
         if (is_a($value, 'Kirby\Cms\Field')) {
             $value = $value->value();
+        }
+        // Kirby\Cms\Content
+        // Kirby\Toolkit\Obj
+        else if (is_object($value) && method_exists($value, 'toArray')) {
+            $value = $value->toArray();
         }
 
         if (is_array($value)) {
