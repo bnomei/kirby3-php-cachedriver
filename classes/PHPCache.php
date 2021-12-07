@@ -234,7 +234,8 @@ final class PHPCache extends FileCache
         $file = $this->file($key);
         $success = file_put_contents(
             $file,
-            '<?php' . PHP_EOL .' return ' . var_export([$key => $data], true) . ';'
+            '<?php' . PHP_EOL .' return ' . var_export([$key => $data], true) . ';',
+            LOCK_EX
         ) !== false;
         opcache_invalidate(__FILE__);
         opcache_invalidate($file);
@@ -249,7 +250,8 @@ final class PHPCache extends FileCache
             $file = $this->file(static::DB_FILENAME);
             $success = file_put_contents(
                 $file,
-                '<?php' . PHP_EOL .' return ' . var_export($this->database, true) . ';'
+                '<?php' . PHP_EOL .' return ' . var_export($this->database, true) . ';',
+                LOCK_EX
             ) !== false;
             opcache_invalidate(__FILE__);
             opcache_invalidate($file);
