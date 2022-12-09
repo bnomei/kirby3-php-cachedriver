@@ -16,7 +16,7 @@ if (! function_exists('elephant')) {
 Kirby::plugin('bnomei/php-cachedriver', [
     'options' => [
         'cache' => true, // create cache folder
-        'mono' => true, // use a single file
+        'mono_dump' => 2048, // write to mono file after n values changed
         'check_opcache' => true,
         'serialize' => 'primitive', // or 'json'
     ],

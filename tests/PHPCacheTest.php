@@ -20,43 +20,33 @@ final class PHPCacheTest extends TestCase
 
     public function testConstruct()
     {
-        $cache = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache = new PHPCache();
         $this->assertInstanceOf(PHPCache::class, $cache);
     }
 
     public function testOption()
     {
-        $cache = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache = new PHPCache();
         $this->assertIsArray($cache->option());
         $this->assertEquals(null, $cache->option('debug'));
     }
 
     public function testFlush()
     {
-        $cache = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache = new PHPCache();
         $this->assertNull($cache->get('something'));
     }
 
     public function testCacheSetGet()
     {
-        $cache = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache = new PHPCache();
         $this->assertTrue($cache->set('some', 'value'));
         $this->assertEquals('value', $cache->get('some'));
     }
 
     public function testCacheWithWriteAndRemove()
     {
-        $cache = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache = new PHPCache();
         $date = date('c');
 
         $this->assertTrue($cache->set('persist', $date));
@@ -112,9 +102,7 @@ final class PHPCacheTest extends TestCase
         JSON;
         $array = json_decode($json, true);
 
-        $cache = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache = new PHPCache();
 
         $cache->set('json_string', $json);
         $cache->set('json_array', $array);
@@ -128,9 +116,7 @@ final class PHPCacheTest extends TestCase
 
     public function testBenchmarkMono()
     {
-        $cache = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache = new PHPCache();
 
         $cache->flush();
         $cache->benchmark(100);
@@ -140,9 +126,7 @@ final class PHPCacheTest extends TestCase
 
     public function testBenchmark()
     {
-        $cache = new PHPCache([
-            'mono' => false,
-        ]);
+        $cache = new PHPCache();
 
         $cache->flush();
         $cache->benchmark(100);
@@ -150,11 +134,9 @@ final class PHPCacheTest extends TestCase
         $this->assertTrue(true);
     }
 
-    public function testLoadingFromMono()
+    public function testLoading()
     {
-        $cache = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache = new PHPCache();
 
         $this->assertNull($cache->get('loadingmono1'));
         $this->assertNull($cache->get('loadingmono2'));
@@ -164,38 +146,14 @@ final class PHPCacheTest extends TestCase
         $this->assertEquals('does work 2', $cache->get('loadingmono2'));
         $this->assertTrue($cache->writeMono());
 
-        $cache2 = new PHPCache([
-            'mono' => true,
-        ]);
-        $this->assertEquals('does work 1', $cache2->get('loadingmono1'));
-        $this->assertEquals('does work 2', $cache2->get('loadingmono2'));
-    }
-
-    public function testLoadingFromFiles()
-    {
-        $cache = new PHPCache([
-            'mono' => false,
-        ]);
-
-        $this->assertNull($cache->get('loadingmono1'));
-        $this->assertNull($cache->get('loadingmono2'));
-        $this->assertTrue($cache->set('loadingmono1', 'does work 1'));
-        $this->assertTrue($cache->set('loadingmono2', 'does work 2'));
-        $this->assertEquals('does work 1', $cache->get('loadingmono1'));
-        $this->assertEquals('does work 2', $cache->get('loadingmono2'));
-
-        $cache2 = new PHPCache([
-            'mono' => false,
-        ]);
+        $cache2 = new PHPCache();
         $this->assertEquals('does work 1', $cache2->get('loadingmono1'));
         $this->assertEquals('does work 2', $cache2->get('loadingmono2'));
     }
 
     public function testGarbageCollection()
     {
-        $cache = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache = new PHPCache();
 
         $this->assertNull($cache->get('loadingmono1'));
         $this->assertNull($cache->get('loadingmono2'));
@@ -210,9 +168,7 @@ final class PHPCacheTest extends TestCase
 
         sleep(61);
 
-        $cache2 = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache2 = new PHPCache();
 
         $this->assertNull($cache2->get('loadingmono1'));
         $this->assertNotNull($cache2->get('loadingmono2'));
@@ -220,9 +176,7 @@ final class PHPCacheTest extends TestCase
 
         sleep(61);
 
-        $cache3 = new PHPCache([
-            'mono' => true,
-        ]);
+        $cache3 = new PHPCache();
 
         $this->assertNull($cache3->get('loadingmono1'));
         $this->assertNull($cache3->get('loadingmono2'));

@@ -9,7 +9,7 @@ use Kirby\Cache\FileCache;
 use Kirby\Cache\Value;
 use Kirby\Cms\Dir;
 use Kirby\Toolkit\A;
-use Kirby\Toolkit\F;
+use Kirby\Filesystem\F;
 use Kirby\Toolkit\Str;
 
 final class PHPCache extends FileCache
@@ -19,11 +19,11 @@ final class PHPCache extends FileCache
     /** @var array $database */
     private $database;
 
-    /** @var bool $isDirty */
+    /** @var int $isDirty */
     private $isDirty;
 
     public const DB_FILENAME = 'phpcache-mono';
-    public const FILE_SALT = 'PH9cH@uy';
+    public const FILE_SALT = 'cHas@PH9uy1!';
 
     public function __construct(array $options = [])
     {
@@ -31,16 +31,16 @@ final class PHPCache extends FileCache
 
         parent::__construct($this->options);
 
-        $this->isDirty = false;
         if ($this->option('check_opcache')) {
             $this->check_opcache();
         }
-        $this->load();
-        $this->garbagecollect();
 
+        $this->isDirty = 0;
         if ($this->option('debug')) {
             $this->flush();
         }
+        $this->load();
+        $this->garbagecollect();
     }
 
     public function __destruct()
@@ -120,18 +120,25 @@ final class PHPCache extends FileCache
         $this->database = [];
 
         $monoFile = $this->file(static::DB_FILENAME);
-        if ($this->option('mono')) {
-            $this->database = F::exists($monoFile) ? include $monoFile : [];
-        } else {
-            foreach (Dir::files($this->root()) as $file) {
-                if (F::filename($file) !== F::filename($monoFile) &&
-                    F::extension($file) === $this->option('extension')) {
-                    $data = include $this->root() . '/' . $file;
-                    foreach ($data as $key => $value) {
-                        $this->database[$key] = $value;
-                    }
+
+        // load mono
+        $this->database = F::exists($monoFile) ? include $monoFile : [];
+        // read partials...
+        $hadPartials = false;
+        foreach (Dir::files($this->root()) as $file) {
+            if (F::filename($file) !== F::filename($monoFile) &&
+                F::extension($file) === $this->option('extension')) {
+                $data = include $this->root() . '/' . $file;
+                foreach ($data as $key => $value) {
+                    $this->database[$key] = $value;
                 }
+                // ...remove the partial
+                unlink($this->root() . '/' . $file);
+                $hadPartials = true;
             }
+        }
+        if ($hadPartials) {
+            $this->writeMono();
         }
     }
 
@@ -173,11 +180,13 @@ final class PHPCache extends FileCache
         } else {
             $data = $this->serialize($value->toArray());
         }
-        
-        $this->database[$key] = $data;
-        $this->isDirty = true;
 
-        if (! $this->option('mono')) {
+        $this->database[$key] = $data;
+        $this->isDirty += 1;
+
+        if ($this->isDirty > $this->option('mono_dump')) {
+            $this->writeMono();
+        } else {
             $this->write($key, $data);
         }
 
@@ -203,7 +212,7 @@ final class PHPCache extends FileCache
         }
         // Kirby\Cms\Content
         // Kirby\Toolkit\Obj
-        else if (is_object($value) && method_exists($value, 'toArray')) {
+        elseif (is_object($value) && method_exists($value, 'toArray')) {
             $value = $value->toArray();
         }
 
@@ -231,14 +240,12 @@ final class PHPCache extends FileCache
 
     private function write($key, $data): bool
     {
-        $this->isDirty = false;
-
         $file = $this->file($key);
         $success = file_put_contents(
-            $file,
-            '<?php' . PHP_EOL .' return ' . var_export([$key => $data], true) . ';',
-            LOCK_EX
-        ) !== false;
+                $file,
+                '<?php' . PHP_EOL .' return ' . var_export([$key => $data], true) . ';',
+                LOCK_EX
+            ) !== false;
         opcache_invalidate(__FILE__);
         opcache_invalidate($file);
 
@@ -247,14 +254,14 @@ final class PHPCache extends FileCache
 
     public function writeMono(): bool
     {
-        if ($this->option('mono') && $this->isDirty) {
-            $this->isDirty = false;
+        if ($this->isDirty > 0) {
+            $this->isDirty = 0;
             $file = $this->file(static::DB_FILENAME);
             $success = file_put_contents(
-                $file,
-                '<?php' . PHP_EOL .' return ' . var_export($this->database, true) . ';',
-                LOCK_EX
-            ) !== false;
+                    $file,
+                    '<?php' . PHP_EOL .' return ' . var_export($this->database, true) . ';',
+                    LOCK_EX
+                ) !== false;
             opcache_invalidate(__FILE__);
             opcache_invalidate($file);
 
@@ -296,13 +303,12 @@ final class PHPCache extends FileCache
 
         if (array_key_exists($key, $this->database)) {
             unset($this->database[$key]);
-            $this->isDirty = true;
+            $this->isDirty += 1;
         }
-        if (! $this->option('mono')) {
-            $file = $this->file($key);
-            if (F::exists($file)) {
-                return unlink($file);
-            }
+
+        $file = $this->file($key);
+        if (F::exists($file)) {
+            return unlink($file);
         }
 
         return true;
@@ -313,7 +319,8 @@ final class PHPCache extends FileCache
      */
     public function flush(): bool
     {
-        $this->isDirty = true;
+        $this->database = [];
+        $this->isDirty = 0;
         return Dir::remove($this->root()) && Dir::make($this->root());
     }
 
@@ -344,7 +351,7 @@ final class PHPCache extends FileCache
         $this->options = array_merge([
             'root' => $root,
             'debug' => \option('debug'),
-            'mono' => \option('bnomei.php-cachedriver.mono'),
+            'mono_dump' => intval(\option('bnomei.php-cachedriver.mono_dump')),
             'check_opcache' => \option('bnomei.php-cachedriver.check_opcache'),
             'serialize' => \option('bnomei.php-cachedriver.serialize'),
         ], $options);
@@ -401,12 +408,12 @@ final class PHPCache extends FileCache
                 }
             }
             echo $label . ' : ' . (microtime(true) - $time) . PHP_EOL;
-            
-            // cleanup
-            for ($i = 0; $i < $count; $i++) {
-                $key = $prefix . $i;
-                $driver->remove($key);
-            }
+        }
+
+        // cleanup
+        for ($i = 0; $i < $count; $i++) {
+            $key = $prefix . $i;
+            $driver->remove($key);
         }
     }
 }

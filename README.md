@@ -12,7 +12,7 @@ Elephant - a highly performant PHP Cache Driver for Kirby 3
 ## Commerical Usage
 
 > <br>
-><b>Support open source!</b><br><br>
+> <b>Support open source!</b><br><br>
 > This plugin is free but if you use it in a commercial project please consider to sponsor me or make a donation.<br>
 > If my work helped you to make some cash it seems fair to me that I might get a little reward as well, right?<br><br>
 > Be kind. Share a little. Thanks.<br><br>
@@ -46,17 +46,7 @@ elephant()->flush();
 
 ### Cache file(s)
 
-With the `bnomei.php-cachedriver.mono` (default: true) setting you can change if the cache driver uses a single or multiple files to store the cached data. In either case all files will be loaded so there is no gain here. But when writing data the behaviour is different. 
-
-#### Mono: lots of values, big changes or many at once
-In the *mono*-mode all data is written at the end of the php skript life-cycle. This does not count against your script execution time but for example when you change value in the cache with each request writing that big file everytime the time might prove inefficient. If the data in your cache changes very rarely or a lot use this behaviour. 
-
-
-#### Mono and concurrent HTTP requests
-But the *mono*-mode is **NOT** suited for concurrent writes. For example: Request A reads the cache and starts before Request B but finishes after B and Request A write to the cache then any changes Request B did to the cache will be lost. This might happen with multiple visitors or concurrent users in the Panel that actually **do change data**. For most websites you should be fine.
-
-#### Multiple Files: few values to cache, small changes and often but not at once
-When storing the data in multiples files - one file per cache key - then writing to the cache happens right when calling `$cache->set()`. This means you only write small changes and fast but it counts towards your max script execution time. This behaviour is well suited when a small amount of data changes often.
+All data is written at the end of the php script life-cycle. This does not count against your script execution time but for example when you change value in the cache with each request writing that big file everytime the time might prove inefficient. Further more incremental updates will be written during script execution depending on the `mono_dump` setting. Additions to the cache will also be each written in temporary files to improve stability of the cache.
 
 ### Serialization of data
 
@@ -114,11 +104,11 @@ Use [Kirby 3 Boost](https://github.com/bnomei/kirby3-boost) to setup a cache for
 
 ## Settings
 
-| bnomei.php-cachedriver.            | Default        | Description               |            
-|---------------------------|----------------|---------------------------|
-| mono | `true` | use a single file instead of one for each key  |
-| check_opcache | `true` | check OPCache settings |
-| serialize | `'primitive'` | which is fastest or `'json'` for less hassle |
+| bnomei.php-cachedriver. | Default       | Description                                  |            
+|-------------------------|---------------|----------------------------------------------|
+| mono_dump               | `256`         | write to cache file every n changes          |
+| check_opcache           | `true`        | check OPCache settings                       |
+| serialize               | `'primitive'` | which is fastest or `'json'` for less hassle |
 
 ## Disclaimer
 
