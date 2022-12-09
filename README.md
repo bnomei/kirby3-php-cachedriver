@@ -85,7 +85,7 @@ When Kirbys global debug config is set to `true` the complete plugin cache will 
 
 ### How to use Elephant with Lapse or Boost
 
-You need to set the cache driver for the [lapse plugin](https://github.com/bnomei/kirby3-lapse) to `php`. Please be aware that the *mono*-mode is not suited for concurrent writes as described above.
+You need to set the cache driver for the [lapse plugin](https://github.com/bnomei/kirby3-lapse) to `php`. Please be aware that the *mono*-mode is not suited for concurrent writes.
 
 **site/config/config.php**
 ```php
