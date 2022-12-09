@@ -106,7 +106,7 @@ Use [Kirby 3 Boost](https://github.com/bnomei/kirby3-boost) to setup a cache for
 
 | bnomei.php-cachedriver. | Default       | Description                                  |            
 |-------------------------|---------------|----------------------------------------------|
-| mono_dump               | `256`         | write to cache file every n changes          |
+| mono_dump               | `2048`         | write to cache file every n changes          |
 | check_opcache           | `true`        | check OPCache settings                       |
 | serialize               | `'primitive'` | which is fastest or `'json'` for less hassle |
 
