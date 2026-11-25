@@ -44,6 +44,15 @@ final class PHPCacheTest extends TestCase
         $this->assertEquals('value', $cache->get('some'));
     }
 
+    public function testPrimitiveSerializationPreservesFalsyValues()
+    {
+        $data = [0, false, '', '0', [], null];
+        $cache = new PHPCache();
+        $this->assertTrue($cache->set('primitives', $data));
+        unset($cache);
+        $this->assertSame($data, (new PHPCache())->get('primitives'));
+    }
+
     public function testCacheWithWriteAndRemove()
     {
         $cache = new PHPCache();

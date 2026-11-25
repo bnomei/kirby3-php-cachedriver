@@ -201,9 +201,6 @@ final class PHPCache extends FileCache
 
     public function serialize($value)
     {
-        if (! $value) {
-            return null;
-        }
         $value = self::isCallable($value) ? $value() : $value;
 
 
